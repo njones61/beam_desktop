@@ -18,3 +18,6 @@
 - Asked: Asked where the cross-section plot is.
   Changed: Added a scaled W-shape cross-section drawing below the selected section properties, with overall depth, flange width, flange/web thicknesses, and x-x axis.
   Worked: The module compiles; GUI display still needs confirmation in the user's desktop session.
+- Asked: Reported a startup error in the cross-section plot: a line had three coordinates.
+  Changed: Supplied both endpoints of the web thickness leader line to Tkinter.
+  Worked: The reported coordinate error is corrected in the code; GUI startup has not been verified in the user's desktop session.

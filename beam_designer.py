@@ -196,7 +196,7 @@ class BeamDesigner(tk.Tk):
         yd=min(h-12,bottom+13);c.create_line(left,yd,right,yd,fill="#64707d",arrow="both")
         c.create_text(cx,yd+2,text=f"bf = {s['bf']:g} in",anchor="n",fill="#465363",font=("TkDefaultFont",8))
         c.create_text(right+12,top+tf/2,text=f"tf {s['tf']:g}",anchor="w",fill="#465363",font=("TkDefaultFont",8))
-        c.create_line(cx+tw/2,right+8,mid+18,fill="#64707d")
+        c.create_line(cx+tw/2,mid+18,right+8,mid+18,fill="#64707d")
         c.create_text(right+12,mid+20,text=f"tw {s['tw']:g}",anchor="w",fill="#465363",font=("TkDefaultFont",8))
 
     def render_results(self):
