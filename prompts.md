@@ -21,3 +21,6 @@
 - Asked: Reported a startup error in the cross-section plot: a line had three coordinates.
   Changed: Supplied both endpoints of the web thickness leader line to Tkinter.
   Worked: The reported coordinate error is corrected in the code; GUI startup has not been verified in the user's desktop session.
+- Asked: Add File menu Save and Open for beam designs, and remove saving designs from the spec's out-of-scope list first.
+  Changed: Updated the spec (saving designs was already absent from out of scope); added Open, Save, and Save As using versioned JSON files with validation and error messages.
+  Worked: The diff passes the whitespace check; the file dialogs and round trip have not been exercised in a desktop session.

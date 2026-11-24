@@ -4,9 +4,12 @@ Steel shape data source: AISC Shapes Database v15.0 (US units), as referenced
 by the original index.html prototype. Educational use only; not for design of record.
 """
 import csv
+import json
 import math
+import os
+import tempfile
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -19,6 +22,55 @@ for _s in SHAPES:
         if _k != "designation": _s[_k] = float(_s[_k])
 BY_NAME = {s["designation"]: s for s in SHAPES}
 NAVY, BLUE, TEAL, PURPLE, ORANGE = "#1f3a5f", "#2f6fb3", "#178a8a", "#7e57c2", "#e0832a"
+
+
+def validate_design(data):
+    """Validate and normalize a saved design before applying it to the form."""
+    if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
+        raise ValueError("Unsupported or invalid beam design file.")
+
+    def number(value, name):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number.")
+        return value
+
+    try:
+        support = data["support"]
+        shape = data["shape"]
+        grade = data["grade"]
+        span = number(data["span"], "Span")
+        fy = number(data["fy"], "Fy")
+        limit = number(data["limit"], "Deflection limit")
+        self_weight = data["self_weight"]
+        points = data["points"]
+        uniforms = data["uniforms"]
+        if support not in ("Simply supported", "Cantilever (fixed left)"):
+            raise ValueError("Unknown support type.")
+        if not isinstance(shape, str) or shape not in BY_NAME:
+            raise ValueError("Unknown steel section.")
+        if grade not in ("A992", "A36", "Custom Fy"):
+            raise ValueError("Unknown steel grade.")
+        if not 0 < span <= 500 or fy <= 0 or limit <= 0:
+            raise ValueError("Span, Fy, and deflection limit must be positive; span must not exceed 500 ft.")
+        if not isinstance(self_weight, bool) or not isinstance(points, list) or not isinstance(uniforms, list):
+            raise ValueError("Invalid self-weight or load list.")
+        clean_points = []
+        for p in points:
+            x, magnitude = number(p["x"], "Point position"), number(p["P"], "Point load")
+            if p["type"] not in ("Dead", "Live") or not 0 <= x <= span or magnitude < 0:
+                raise ValueError("Invalid point load.")
+            clean_points.append({"x": x, "P": magnitude, "type": p["type"]})
+        clean_uniforms = []
+        for u in uniforms:
+            a, b, magnitude = number(u["a"], "Uniform start"), number(u["b"], "Uniform end"), number(u["w"], "Uniform load")
+            if u["type"] not in ("Dead", "Live") or not 0 <= a < b <= span or magnitude < 0:
+                raise ValueError("Invalid uniform load.")
+            clean_uniforms.append({"a": a, "b": b, "w": magnitude, "type": u["type"]})
+        return {"version": 1, "support": support, "span": span, "shape": shape,
+                "grade": grade, "fy": fy, "limit": limit, "self_weight": self_weight,
+                "points": clean_points, "uniforms": clean_uniforms}
+    except (KeyError, TypeError, OverflowError) as exc:
+        raise ValueError("Beam design file is missing a field or contains an invalid value.") from exc
 
 
 def analyze(support, L, points, uniforms, E=29000, I=1):
@@ -62,6 +114,12 @@ class BeamDesigner(tk.Tk):
         self.title("Beam Designer | ASD")
         self.geometry("1320x920"); self.minsize(1050,720); self.configure(bg="#f3f5f8")
         self.points=[]; self.uniforms=[]; self.point_rows=[]; self.uniform_rows=[]
+        self.design_path = None
+        menu = tk.Menu(self); file_menu = tk.Menu(menu, tearoff=False)
+        file_menu.add_command(label="Open…", command=self.open_design)
+        file_menu.add_command(label="Save", command=self.save_design)
+        file_menu.add_command(label="Save As…", command=lambda: self.save_design(save_as=True))
+        menu.add_cascade(label="File", menu=file_menu); self.config(menu=menu)
         self._style(); self._build(); self.reset()
 
     def _style(self):
@@ -120,8 +178,70 @@ class BeamDesigner(tk.Tk):
         ttk.Button(f,text="Reset to example",command=self.reset).pack(fill="x",pady=12)
 
     def reset(self):
+        self.design_path = None
         self.support.set("Simply supported");self.span.set("20");self.shape.set("W12X26");self.grade.set("A992");self.fy.set("50");self.limit.set("360");self.selfw.set(False)
         self.points=[];self.uniforms=[{"a":0.,"b":20.,"w":1.,"type":"Live"}];self.rows();self.update()
+
+    def current_design(self):
+        # Read the widgets themselves so the file contains the latest edits.
+        try:
+            def loads(rows, numeric_fields):
+                return [{key: (float(var.get()) if key in numeric_fields else var.get())
+                         for key, var in row.items()} for row in rows]
+            return validate_design({"version": 1, "support": self.support.get(),
+                "span": float(self.span.get()), "shape": self.shape.get(),
+                "grade": self.grade.get(), "fy": float(self.fy.get()),
+                "limit": float(self.limit.get()), "self_weight": self.selfw.get(),
+                "points": loads(self.point_rows, ("x", "P")),
+                "uniforms": loads(self.uniform_rows, ("a", "b", "w"))})
+        except ValueError as exc:
+            raise ValueError(f"Check the beam inputs before saving: {exc}") from exc
+
+    def save_design(self, save_as=False):
+        try:
+            design = self.current_design()
+        except ValueError as exc:
+            messagebox.showerror("Cannot save design", str(exc), parent=self)
+            return
+        path = self.design_path if not save_as else None
+        if path is None:
+            path = filedialog.asksaveasfilename(parent=self, title="Save beam design",
+                defaultextension=".json", filetypes=[("Beam design", "*.json"), ("All files", "*")])
+            if not path: return
+        temp_path = None
+        try:
+            # Write beside the destination so a failed save does not truncate it.
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=Path(path).resolve().parent,
+                                             prefix=".beam-", suffix=".tmp", delete=False) as f:
+                temp_path = f.name
+                json.dump(design, f, indent=2, allow_nan=False)
+                f.write("\n")
+            os.replace(temp_path, path)
+            temp_path = None
+            self.design_path = path
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Cannot save design", str(exc), parent=self)
+        finally:
+            if temp_path:
+                try: os.unlink(temp_path)
+                except OSError: pass
+
+    def open_design(self):
+        path = filedialog.askopenfilename(parent=self, title="Open beam design",
+            filetypes=[("Beam design", "*.json"), ("All files", "*")])
+        if not path: return
+        try:
+            with open(path, encoding="utf-8") as f:
+                design = validate_design(json.load(f))
+        except (OSError, UnicodeError, ValueError) as exc:
+            messagebox.showerror("Cannot open design", str(exc), parent=self)
+            return
+        self.support.set(design["support"]); self.span.set(str(design["span"]))
+        self.shape.set(design["shape"]); self.grade.set(design["grade"])
+        self.fy.set(str(design["fy"])); self.limit.set(str(design["limit"]))
+        self.selfw.set(design["self_weight"])
+        self.points = design["points"]; self.uniforms = design["uniforms"]
+        self.rows(); self.update(); self.design_path = path
 
     def add_point(self):
         try:L=float(self.span.get())

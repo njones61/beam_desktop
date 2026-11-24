@@ -72,6 +72,11 @@ design of record.
   (fb/Fb, fv/Fv, deflection/limit)
 - Sign convention and assumptions shown on screen
 
+## Save and open
+- A File menu provides Save and Open for beam designs stored locally. Save and
+  restore the support, span, section and grade, custom Fy, deflection limit,
+  self-weight setting, and point and uniform loads with their types.
+
 ## Look and feel
 Clean and professional Tkinter desktop interface, with an example beam loaded
 when it opens. Draw the beam and diagrams within the desktop application.
