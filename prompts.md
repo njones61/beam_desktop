@@ -30,3 +30,6 @@
 - Asked: Add a button that exports x, shear, moment, and deflection results to an Excel-compatible CSV file.
   Changed: Added a CSV export button, including evenly spaced positions, load boundaries, both sides of point-load shear jumps, and units; updated the spec.
   Worked: Implementation reviewed; export and Excel opening have not been exercised in a desktop session.
+- Asked: Add a button to save a calculation sheet PDF with inputs, diagrams, and checks.
+  Changed: Added PDF export using ReportLab, an installation requirement, and the corresponding spec entry. The report includes loads, reactions, total-load diagrams, ASD checks, and the app's assumptions.
+  Worked: Generated and visually reviewed example and long-load PDF pages; the desktop button has not been exercised in the user's session. The user's Miniconda environment needs ReportLab installed.

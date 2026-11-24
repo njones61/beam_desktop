@@ -173,6 +173,7 @@ class BeamDesigner(tk.Tk):
         self.summary=ttk.Frame(right,padding=10,style="Card.TFrame");self.summary.pack(fill="x",pady=10)
         self.summary_text=ttk.Label(self.summary,text="",style="Muted.TLabel",justify="left")
         self.summary_text.pack(anchor="w")
+        ttk.Button(right,text="Save calculation sheet (PDF)…",command=self.export_calculation_sheet).pack(anchor="e",pady=(0,5))
         ttk.Button(right,text="Export results to CSV…",command=self.export_results).pack(anchor="e",pady=(0,10))
         self.checks=ttk.Frame(right,padding=12,style="Card.TFrame");self.checks.pack(fill="x")
         self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="Muted.TLabel");self.notes.pack(fill="x",pady=12)
@@ -305,6 +306,38 @@ class BeamDesigner(tk.Tk):
             temp_path = None
         except (OSError, ValueError) as exc:
             messagebox.showerror("Cannot export results", str(exc), parent=self)
+        finally:
+            if temp_path:
+                try: os.unlink(temp_path)
+                except OSError: pass
+
+    def export_calculation_sheet(self):
+        try:
+            design = self.current_design()
+        except ValueError as exc:
+            messagebox.showerror("Cannot create calculation sheet", str(exc), parent=self)
+            return
+        try:
+            from calculation_sheet import build_calculation_sheet
+        except ImportError as exc:
+            if exc.name and (exc.name == "reportlab" or exc.name.startswith("reportlab.")):
+                messagebox.showerror("PDF support unavailable",
+                    "Install ReportLab for this Python environment, then restart the app:\n\npython -m pip install reportlab", parent=self)
+                return
+            raise
+        path = filedialog.asksaveasfilename(parent=self, title="Save calculation sheet",
+            defaultextension=".pdf", filetypes=[("PDF files", "*.pdf"), ("All files", "*")])
+        if not path:
+            return
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=Path(path).resolve().parent, prefix=".beam-", suffix=".tmp", delete=False) as f:
+                temp_path = f.name
+            build_calculation_sheet(temp_path, design, BY_NAME[design["shape"]], analyze)
+            os.replace(temp_path, path)
+            temp_path = None
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Cannot create calculation sheet", str(exc), parent=self)
         finally:
             if temp_path:
                 try: os.unlink(temp_path)

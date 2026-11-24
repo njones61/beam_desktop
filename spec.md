@@ -74,6 +74,9 @@ design of record.
 - An export button saves a CSV table of distance, shear, moment, and total-load
   deflection for Excel. Include load boundaries and both sides of interior
   point loads, with the shear side identified.
+- A calculation sheet button saves a PDF listing all inputs, loads, reactions,
+  diagrams, and ASD checks, with the assumptions and educational-use limitation.
+  PDF generation uses the ReportLab Python package.
 
 ## Save and open
 - A File menu provides Save and Open for beam designs stored locally. Save and
