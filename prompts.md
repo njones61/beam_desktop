@@ -15,3 +15,6 @@
 - Asked: Reported that the app hangs after the startup fix.
   Changed: Reviewed the startup and calculation flow; no definite blocking loop was identified. Need the stack trace from the user's hung process to locate the wait.
   Worked: Not yet confirmed.
+- Asked: Asked where the cross-section plot is.
+  Changed: Added a scaled W-shape cross-section drawing below the selected section properties, with overall depth, flange width, flange/web thicknesses, and x-x axis.
+  Worked: The module compiles; GUI display still needs confirmation in the user's desktop session.

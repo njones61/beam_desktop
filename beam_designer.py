@@ -109,6 +109,8 @@ class BeamDesigner(tk.Tk):
         self.grade=tk.StringVar();self.field(f,"Steel grade",self.grade,["A992","A36","Custom Fy"])
         self.fy=tk.StringVar();self.field(f,"Fy (ksi)",self.fy)
         self.props=ttk.Label(f,text="",style="Muted.TLabel",justify="left");self.props.pack(anchor="w",pady=7)
+        self.section_canvas=tk.Canvas(f,height=190,bg="#f6f8fb",highlightthickness=1,highlightbackground="#dfe4ea")
+        self.section_canvas.pack(fill="x",pady=(0,8))
         ttk.Label(f,text="POINT LOADS",style="Section.TLabel").pack(anchor="w",pady=(12,0))
         self.pl=ttk.Frame(f,style="Card.TFrame");self.pl.pack(fill="x");ttk.Button(f,text="+ Add point load",command=self.add_point).pack(fill="x")
         ttk.Label(f,text="UNIFORM LOADS",style="Section.TLabel").pack(anchor="w",pady=(12,0))
@@ -161,6 +163,7 @@ class BeamDesigner(tk.Tk):
             if any(p["P"]<0 or not 0<=p["x"]<=L for p in self.points):raise ValueError("Point loads must be nonnegative and within the span.")
             if any(u["w"]<0 or not 0<=u["a"]<u["b"]<=L for u in self.uniforms):raise ValueError("Uniform loads must be nonnegative and within the span, with end after start.")
             self.props.configure(text=f"{s['designation']}  |  d {s['d']} in · bf {s['bf']} in · tw {s['tw']} in · tf {s['tf']} in\nA {s['A']} in² · Ix {s['Ix']} in⁴ · Sx {s['Sx']} in³ · E 29,000 ksi")
+            self.draw_section(s)
             pts=self.points; uni=[dict(u) for u in self.uniforms]
             if self.selfw.get():uni.append({"a":0,"b":L,"w":s["weight_plf"]/1000,"type":"Dead"})
             self.result=analyze(self.support.get(),L,pts,uni,29000,s["Ix"])
@@ -170,6 +173,31 @@ class BeamDesigner(tk.Tk):
             self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700)
             self.summary_text.configure(text="")
             for w in self.checks.winfo_children(): w.destroy()
+
+    def draw_section(self,s):
+        c=self.section_canvas;c.delete("all")
+        w=max(c.winfo_width(),280);h=190
+        # Scale the complete cross-section to the available drawing area.
+        scale=min((w-112)/s["bf"],(h-42)/s["d"])
+        bw=s["bf"]*scale;bh=s["d"]*scale;tf=s["tf"]*scale;tw=s["tw"]*scale
+        cx=w/2;top=24+(h-42-bh)/2;bottom=top+bh;left=cx-bw/2;right=cx+bw/2
+        poly=[(left,top),(right,top),(right,top+tf),(cx+tw/2,top+tf),
+              (cx+tw/2,bottom-tf),(right,bottom-tf),(right,bottom),
+              (left,bottom),(left,bottom-tf),(cx-tw/2,bottom-tf),
+              (cx-tw/2,top+tf),(left,top+tf)]
+        pts=[v for xy in poly for v in xy]
+        c.create_polygon(*pts,fill="#dbe5f1",outline=NAVY,width=2)
+        mid=(top+bottom)/2
+        c.create_line(left-8,mid,right+8,mid,fill="#d6453d",dash=(5,3))
+        c.create_text(right+12,mid,text="x–x",anchor="w",fill="#d6453d",font=("TkDefaultFont",8))
+        # Dimension lines for overall depth, flange width, and flange/web thickness.
+        xd=left-26;c.create_line(xd,top,xd,bottom,fill="#64707d",arrow="both")
+        c.create_text(xd-4,mid,text=f"d = {s['d']:g} in",angle=90,fill="#465363",font=("TkDefaultFont",8))
+        yd=min(h-12,bottom+13);c.create_line(left,yd,right,yd,fill="#64707d",arrow="both")
+        c.create_text(cx,yd+2,text=f"bf = {s['bf']:g} in",anchor="n",fill="#465363",font=("TkDefaultFont",8))
+        c.create_text(right+12,top+tf/2,text=f"tf {s['tf']:g}",anchor="w",fill="#465363",font=("TkDefaultFont",8))
+        c.create_line(cx+tw/2,right+8,mid+18,fill="#64707d")
+        c.create_text(right+12,mid+20,text=f"tw {s['tw']:g}",anchor="w",fill="#465363",font=("TkDefaultFont",8))
 
     def render_results(self):
         r=self.result;live=self.live;s=self.section;L=float(self.span.get());simple=self.support.get()=="Simply supported"
