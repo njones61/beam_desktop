@@ -39,3 +39,6 @@
 - Asked: Increase the font size on the right side of the app.
   Changed: Enlarged the result summary, checks, diagram labels, notes, and export buttons; added a vertical scrollbar for the results panel.
   Worked: The layout has not been visually verified in the user's desktop session.
+- Asked: Write a short README describing the app, packages to install, and launch command.
+  Changed: Added README.md with the app's purpose, Python/Tkinter and ReportLab requirements, installation command, and startup command.
+  Worked: The documented commands and dependency match the existing project files; installation and startup were not run.
