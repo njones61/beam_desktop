@@ -153,6 +153,10 @@ class BeamDesigner(tk.Tk):
         st.configure("Title.TLabel",background=NAVY,foreground="white",font=("TkDefaultFont",16,"bold"))
         st.configure("Muted.TLabel",background="white",foreground="#64707d")
         st.configure("Section.TLabel",background="white",foreground="#64707d",font=("TkDefaultFont",10,"bold"))
+        st.configure("Metric.TLabel",background="white",foreground="#1d2733",font=("TkDefaultFont",11,"bold"))
+        st.configure("Export.TButton",font=("TkDefaultFont",9),padding=(12,6),
+                     background="#edf3f9",foreground=NAVY,bordercolor="#cedae6",relief="flat")
+        st.map("Export.TButton",background=[("active", "#dbe8f5"), ("pressed", "#cddff0")])
         st.configure("TButton",padding=6)
 
     def _build(self):
@@ -170,11 +174,24 @@ class BeamDesigner(tk.Tk):
         self._inputs()
         self.chart=tk.Canvas(right,bg="white",height=490,highlightthickness=0);self.chart.pack(fill="x",expand=False)
         self.chart.bind("<Configure>",lambda e:self.draw())
-        self.summary=ttk.Frame(right,padding=10,style="Card.TFrame");self.summary.pack(fill="x",pady=10)
-        self.summary_text=ttk.Label(self.summary,text="",style="Muted.TLabel",justify="left")
-        self.summary_text.pack(anchor="w")
-        ttk.Button(right,text="Save calculation sheet (PDF)…",command=self.export_calculation_sheet).pack(anchor="e",pady=(0,5))
-        ttk.Button(right,text="Export results to CSV…",command=self.export_results).pack(anchor="e",pady=(0,10))
+        self.summary=ttk.Frame(right,padding=(14,10),style="Card.TFrame");self.summary.pack(fill="x",pady=(10,6))
+        summary_heading=ttk.Frame(self.summary,style="Card.TFrame");summary_heading.pack(fill="x")
+        self.summary_status=tk.Label(summary_heading,text="",font=("TkDefaultFont",9,"bold"),padx=8,pady=3,bd=0)
+        self.summary_status.pack(side="left")
+        self.summary_text=ttk.Label(summary_heading,text="",style="Muted.TLabel")
+        self.summary_text.pack(side="left",padx=(10,0))
+        metrics=ttk.Frame(self.summary,style="Card.TFrame");metrics.pack(fill="x",pady=(9,0))
+        self.metric_labels=[]
+        for col, title in enumerate(("MAX SHEAR", "MAX MOMENT", "MAX TOTAL DEFLECTION")):
+            metrics.columnconfigure(col,weight=1,uniform="metric")
+            cell=ttk.Frame(metrics,style="Card.TFrame");cell.grid(row=0,column=col,sticky="nw",padx=(0,8))
+            ttk.Label(cell,text=title,style="Section.TLabel",font=("TkDefaultFont",9,"bold")).pack(anchor="w")
+            value=ttk.Label(cell,text="",style="Metric.TLabel");value.pack(anchor="w",pady=(2,0))
+            location=ttk.Label(cell,text="",style="Muted.TLabel",font=("TkDefaultFont",9));location.pack(anchor="w")
+            self.metric_labels.append((value,location))
+        actions=ttk.Frame(right);actions.pack(fill="x",pady=(0,8))
+        ttk.Button(actions,text="Calculation sheet · PDF",style="Export.TButton",command=self.export_calculation_sheet).pack(side="right")
+        ttk.Button(actions,text="Export results · CSV",style="Export.TButton",command=self.export_results).pack(side="right",padx=(0,8))
         self.checks=ttk.Frame(right,padding=12,style="Card.TFrame");self.checks.pack(fill="x")
         self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="Muted.TLabel");self.notes.pack(fill="x",pady=12)
 
@@ -392,6 +409,9 @@ class BeamDesigner(tk.Tk):
         except (ValueError,KeyError,ZeroDivisionError) as e:
             self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700)
             self.summary_text.configure(text="")
+            self.summary_status.configure(text="",bg="white")
+            for value,location in self.metric_labels:
+                value.configure(text="");location.configure(text="")
             for w in self.checks.winfo_children(): w.destroy()
 
     def draw_section(self,s):
@@ -426,7 +446,10 @@ class BeamDesigner(tk.Tk):
         checks=[("Bending",fb,Fb,"ksi"),("Shear",fv,Fv,"ksi"),("Deflection (live load)",dl,limit,"in")]
         passed=all(demand/allow<=1+1e-9 for _,demand,allow,_ in checks)
         reaction=f"Reactions: {r['RA']:.2f} / {r['RB']:.2f} kip (left / right)" if simple else f"Fixed end: {r['RA']:.2f} kip, moment {abs(r['M0']):.2f} kip-ft"
-        self.summary_text.configure(text=f"{'PASS' if passed else 'FAIL'}  |  {reaction}\nMax shear {vabs:.2f} kip at {r['vmax'][1]:.2f} ft   ·   Max moment {mabs:.2f} kip-ft at {r['mmax'][1]:.2f} ft\nMax total deflection {dt:.3f} in at {r['dmax'][1]:.2f} ft")
+        self.summary_status.configure(text="PASS" if passed else "FAIL",bg="#e8f6ee" if passed else "#fdf0ef",fg="#1f6f40" if passed else "#8c2a24")
+        self.summary_text.configure(text=reaction)
+        for (value,location),(text,x) in zip(self.metric_labels,[(f"{vabs:.2f} kip",r['vmax'][1]),(f"{mabs:.2f} kip-ft",r['mmax'][1]),(f"{dt:.3f} in",r['dmax'][1])]):
+            value.configure(text=text);location.configure(text=f"at x = {x:.2f} ft")
         for w in self.checks.winfo_children():w.destroy()
         ttk.Label(self.checks,text="DESIGN CHECKS",style="Section.TLabel").grid(row=0,column=0,columnspan=5,sticky="w",pady=(0,6))
         for c,t in enumerate(("Check","Demand","Allowable","Ratio","Result")):ttk.Label(self.checks,text=t,style="Muted.TLabel").grid(row=1,column=c,sticky="w",padx=8)

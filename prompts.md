@@ -33,3 +33,6 @@
 - Asked: Add a button to save a calculation sheet PDF with inputs, diagrams, and checks.
   Changed: Added PDF export using ReportLab, an installation requirement, and the corresponding spec entry. The report includes loads, reactions, total-load diagrams, ASD checks, and the app's assumptions.
   Worked: Generated and visually reviewed example and long-load PDF pages; the desktop button has not been exercised in the user's session. The user's Miniconda environment needs ReportLab installed.
+- Asked: Improve the results summary and export buttons shown in the screenshot.
+  Changed: Reorganized the summary into a colored pass/fail status and three labeled metrics, and placed the export actions side by side with a compact style.
+  Worked: Code changes were reviewed; the updated layout has not been visually verified in the desktop session.
