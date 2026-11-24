@@ -7,6 +7,7 @@ import csv
 import json
 import math
 import os
+import sys
 import tempfile
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -121,6 +122,29 @@ class BeamDesigner(tk.Tk):
         file_menu.add_command(label="Save As…", command=lambda: self.save_design(save_as=True))
         menu.add_cascade(label="File", menu=file_menu); self.config(menu=menu)
         self._style(); self._build(); self.reset()
+        self.after_idle(self.bring_to_front)
+
+    def bring_to_front(self):
+        if sys.platform == "darwin":
+            # Raise the Python application as well as its Tk window on macOS.
+            try:
+                import ctypes
+                objc = ctypes.CDLL("/usr/lib/libobjc.A.dylib")
+                ctypes.CDLL("/System/Library/Frameworks/AppKit.framework/AppKit")
+                objc.objc_getClass.argtypes = [ctypes.c_char_p]
+                objc.objc_getClass.restype = ctypes.c_void_p
+                objc.sel_registerName.argtypes = [ctypes.c_char_p]
+                objc.sel_registerName.restype = ctypes.c_void_p
+                get_app = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(("objc_msgSend", objc))
+                activate = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool)(("objc_msgSend", objc))
+                app = get_app(objc.objc_getClass(b"NSApplication"), objc.sel_registerName(b"sharedApplication"))
+                activate(app, objc.sel_registerName(b"activateIgnoringOtherApps:"), True)
+            except (OSError, AttributeError):
+                pass
+        self.lift()
+        self.attributes("-topmost", True)
+        self.focus_force()
+        self.after(500, lambda: self.attributes("-topmost", False))
 
     def _style(self):
         st=ttk.Style(self); st.theme_use("clam")

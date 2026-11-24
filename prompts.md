@@ -24,3 +24,6 @@
 - Asked: Add File menu Save and Open for beam designs, and remove saving designs from the spec's out-of-scope list first.
   Changed: Updated the spec (saving designs was already absent from out of scope); added Open, Save, and Save As using versioned JSON files with validation and error messages.
   Worked: The diff passes the whitespace check; the file dialogs and round trip have not been exercised in a desktop session.
+- Asked: Bring the application window to the front when it launches.
+  Changed: On startup, request macOS application activation and raise and focus the Tk window, then release its temporary topmost setting.
+  Worked: GUI focus behavior has not been verified in a desktop session.
