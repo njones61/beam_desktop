@@ -36,3 +36,6 @@
 - Asked: Improve the results summary and export buttons shown in the screenshot.
   Changed: Reorganized the summary into a colored pass/fail status and three labeled metrics, and placed the export actions side by side with a compact style.
   Worked: Code changes were reviewed; the updated layout has not been visually verified in the desktop session.
+- Asked: Increase the font size on the right side of the app.
+  Changed: Enlarged the result summary, checks, diagram labels, notes, and export buttons; added a vertical scrollbar for the results panel.
+  Worked: The layout has not been visually verified in the user's desktop session.

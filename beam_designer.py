@@ -153,8 +153,11 @@ class BeamDesigner(tk.Tk):
         st.configure("Title.TLabel",background=NAVY,foreground="white",font=("TkDefaultFont",16,"bold"))
         st.configure("Muted.TLabel",background="white",foreground="#64707d")
         st.configure("Section.TLabel",background="white",foreground="#64707d",font=("TkDefaultFont",10,"bold"))
-        st.configure("Metric.TLabel",background="white",foreground="#1d2733",font=("TkDefaultFont",11,"bold"))
-        st.configure("Export.TButton",font=("TkDefaultFont",9),padding=(12,6),
+        st.configure("Result.TLabel",background="white",foreground="#1d2733",font=("TkDefaultFont",12))
+        st.configure("ResultMuted.TLabel",background="white",foreground="#64707d",font=("TkDefaultFont",12))
+        st.configure("ResultHeading.TLabel",background="white",foreground="#64707d",font=("TkDefaultFont",11,"bold"))
+        st.configure("Metric.TLabel",background="white",foreground="#1d2733",font=("TkDefaultFont",14,"bold"))
+        st.configure("Export.TButton",font=("TkDefaultFont",11),padding=(12,6),
                      background="#edf3f9",foreground=NAVY,bordercolor="#cedae6",relief="flat")
         st.map("Export.TButton",background=[("active", "#dbe8f5"), ("pressed", "#cddff0")])
         st.configure("TButton",padding=6)
@@ -165,7 +168,14 @@ class BeamDesigner(tk.Tk):
         self.status=ttk.Label(header,text="Shear · moment · deflection  |  Steel W-shapes · ASD",style="Title.TLabel"); self.status.pack(side="left",padx=20)
         body=ttk.Frame(self,padding=12);body.pack(fill="both",expand=True)
         left=ttk.Frame(body,width=360);left.pack(side="left",fill="y",padx=(0,10));left.pack_propagate(False)
-        right=ttk.Frame(body);right.pack(side="left",fill="both",expand=True)
+        right_area=ttk.Frame(body);right_area.pack(side="left",fill="both",expand=True)
+        right_canvas=tk.Canvas(right_area,bg="#f3f5f8",highlightthickness=0)
+        right_scroll=ttk.Scrollbar(right_area,orient="vertical",command=right_canvas.yview)
+        right_canvas.configure(yscrollcommand=right_scroll.set)
+        right_scroll.pack(side="right",fill="y");right_canvas.pack(side="left",fill="both",expand=True)
+        right=ttk.Frame(right_canvas);right_window=right_canvas.create_window((0,0),window=right,anchor="nw")
+        right.bind("<Configure>",lambda e:right_canvas.configure(scrollregion=right_canvas.bbox("all")))
+        right_canvas.bind("<Configure>",lambda e:right_canvas.itemconfigure(right_window,width=e.width))
         self.canvas=tk.Canvas(left,bg="white",highlightthickness=0); scroll=ttk.Scrollbar(left,orient="vertical",command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=scroll.set);scroll.pack(side="right",fill="y");self.canvas.pack(side="left",fill="both",expand=True)
         self.form=ttk.Frame(self.canvas,padding=14,style="Card.TFrame");self.form_win=self.canvas.create_window((0,0),window=self.form,anchor="nw")
@@ -176,24 +186,25 @@ class BeamDesigner(tk.Tk):
         self.chart.bind("<Configure>",lambda e:self.draw())
         self.summary=ttk.Frame(right,padding=(14,10),style="Card.TFrame");self.summary.pack(fill="x",pady=(10,6))
         summary_heading=ttk.Frame(self.summary,style="Card.TFrame");summary_heading.pack(fill="x")
-        self.summary_status=tk.Label(summary_heading,text="",font=("TkDefaultFont",9,"bold"),padx=8,pady=3,bd=0)
+        self.summary_status=tk.Label(summary_heading,text="",font=("TkDefaultFont",11,"bold"),padx=8,pady=3,bd=0)
         self.summary_status.pack(side="left")
-        self.summary_text=ttk.Label(summary_heading,text="",style="Muted.TLabel")
+        self.summary_text=ttk.Label(summary_heading,text="",style="ResultMuted.TLabel")
         self.summary_text.pack(side="left",padx=(10,0))
         metrics=ttk.Frame(self.summary,style="Card.TFrame");metrics.pack(fill="x",pady=(9,0))
         self.metric_labels=[]
         for col, title in enumerate(("MAX SHEAR", "MAX MOMENT", "MAX TOTAL DEFLECTION")):
             metrics.columnconfigure(col,weight=1,uniform="metric")
             cell=ttk.Frame(metrics,style="Card.TFrame");cell.grid(row=0,column=col,sticky="nw",padx=(0,8))
-            ttk.Label(cell,text=title,style="Section.TLabel",font=("TkDefaultFont",9,"bold")).pack(anchor="w")
+            ttk.Label(cell,text=title,style="ResultHeading.TLabel").pack(anchor="w")
             value=ttk.Label(cell,text="",style="Metric.TLabel");value.pack(anchor="w",pady=(2,0))
-            location=ttk.Label(cell,text="",style="Muted.TLabel",font=("TkDefaultFont",9));location.pack(anchor="w")
+            location=ttk.Label(cell,text="",style="ResultMuted.TLabel");location.pack(anchor="w")
             self.metric_labels.append((value,location))
         actions=ttk.Frame(right);actions.pack(fill="x",pady=(0,8))
         ttk.Button(actions,text="Calculation sheet · PDF",style="Export.TButton",command=self.export_calculation_sheet).pack(side="right")
         ttk.Button(actions,text="Export results · CSV",style="Export.TButton",command=self.export_results).pack(side="right",padx=(0,8))
         self.checks=ttk.Frame(right,padding=12,style="Card.TFrame");self.checks.pack(fill="x")
-        self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="Muted.TLabel");self.notes.pack(fill="x",pady=12)
+        self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="ResultMuted.TLabel");self.notes.pack(fill="x",pady=12)
+        self.notes.bind("<Configure>",lambda e:self.notes.configure(wraplength=max(200,e.width)))
 
     def field(self,parent,label,var,values=None):
         ttk.Label(parent,text=label,style="Muted.TLabel").pack(anchor="w",pady=(5,2))
@@ -407,7 +418,7 @@ class BeamDesigner(tk.Tk):
             live=analyze(self.support.get(),L,[p for p in pts if p["type"]=="Live"],[u for u in self.uniforms if u["type"]=="Live"],29000,s["Ix"])
             self.live=live;self.section=s;self.fyval=fy;self.den=den;self.error=None;self.draw();self.render_results()
         except (ValueError,KeyError,ZeroDivisionError) as e:
-            self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700)
+            self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700,font=("TkDefaultFont",12))
             self.summary_text.configure(text="")
             self.summary_status.configure(text="",bg="white")
             for value,location in self.metric_labels:
@@ -451,15 +462,15 @@ class BeamDesigner(tk.Tk):
         for (value,location),(text,x) in zip(self.metric_labels,[(f"{vabs:.2f} kip",r['vmax'][1]),(f"{mabs:.2f} kip-ft",r['mmax'][1]),(f"{dt:.3f} in",r['dmax'][1])]):
             value.configure(text=text);location.configure(text=f"at x = {x:.2f} ft")
         for w in self.checks.winfo_children():w.destroy()
-        ttk.Label(self.checks,text="DESIGN CHECKS",style="Section.TLabel").grid(row=0,column=0,columnspan=5,sticky="w",pady=(0,6))
-        for c,t in enumerate(("Check","Demand","Allowable","Ratio","Result")):ttk.Label(self.checks,text=t,style="Muted.TLabel").grid(row=1,column=c,sticky="w",padx=8)
+        ttk.Label(self.checks,text="DESIGN CHECKS",style="ResultHeading.TLabel").grid(row=0,column=0,columnspan=5,sticky="w",pady=(0,6))
+        for c,t in enumerate(("Check","Demand","Allowable","Ratio","Result")):ttk.Label(self.checks,text=t,style="ResultMuted.TLabel").grid(row=1,column=c,sticky="w",padx=8)
         for i,(name,demand,allow,unit) in enumerate(checks,2):
             ratio=demand/allow;ok=ratio<=1+1e-9
-            ttk.Label(self.checks,text=name).grid(row=i,column=0,sticky="w",padx=8,pady=4)
-            ttk.Label(self.checks,text=f"{demand:.3f} {unit}").grid(row=i,column=1,sticky="w",padx=8)
-            ttk.Label(self.checks,text=f"{allow:.3f} {unit}").grid(row=i,column=2,sticky="w",padx=8)
-            ttk.Label(self.checks,text=f"{ratio:.2f}").grid(row=i,column=3,sticky="w",padx=8)
-            ttk.Label(self.checks,text="PASS" if ok else "FAIL",foreground="#238348" if ok else "#b02b25").grid(row=i,column=4,sticky="w",padx=8)
+            ttk.Label(self.checks,text=name,style="Result.TLabel").grid(row=i,column=0,sticky="w",padx=8,pady=4)
+            ttk.Label(self.checks,text=f"{demand:.3f} {unit}",style="Result.TLabel").grid(row=i,column=1,sticky="w",padx=8)
+            ttk.Label(self.checks,text=f"{allow:.3f} {unit}",style="Result.TLabel").grid(row=i,column=2,sticky="w",padx=8)
+            ttk.Label(self.checks,text=f"{ratio:.2f}",style="Result.TLabel").grid(row=i,column=3,sticky="w",padx=8)
+            ttk.Label(self.checks,text="PASS" if ok else "FAIL",style="Result.TLabel",foreground="#238348" if ok else "#b02b25").grid(row=i,column=4,sticky="w",padx=8)
         self.notes.configure(text="Basis: ASD; stresses use total dead + live load and deflection uses live load only. Beam assumed fully laterally braced; steel section assumed compact. Buckling is not checked. Fb = 0.66 Fy; Fv = 0.4 Fy. Sign convention: positive shear upward on the left face, positive moment sagging, deflection downward. Educational tool, not for design of record.")
 
     def draw(self):
@@ -467,25 +478,25 @@ class BeamDesigner(tk.Tk):
         c=self.chart;c.delete("all");w=max(480,c.winfo_width());L=float(self.span.get());r=self.result
         left,right=62,w-28;pw=right-left
         def X(x):return left+x/L*pw
-        c.create_text(12,14,anchor="nw",text=f"Beam and diagrams  ·  {self.section['designation']}  ·  hover for V, M and δ",fill=NAVY,font=("TkDefaultFont",11,"bold"))
+        c.create_text(12,14,anchor="nw",text=f"Beam and diagrams  ·  {self.section['designation']}  ·  hover for V, M and δ",fill=NAVY,font=("TkDefaultFont",12,"bold"))
         # Beam/load sketch
         ybeam=85;c.create_line(left,ybeam,right,ybeam,width=8,fill=NAVY)
         for p in self.points:
-            x=X(p["x"]);col=ORANGE if p["type"]=="Live" else "#5b6b82";c.create_line(x,38,x,ybeam-5,arrow="last",fill=col,width=2);c.create_text(x,32,text=f"{p['P']:g} kip",fill=col)
+            x=X(p["x"]);col=ORANGE if p["type"]=="Live" else "#5b6b82";c.create_line(x,38,x,ybeam-5,arrow="last",fill=col,width=2);c.create_text(x,32,text=f"{p['P']:g} kip",fill=col,font=("TkDefaultFont",12))
         for u in self.uniforms:
             xa,xb=X(u["a"]),X(u["b"]);col=ORANGE if u["type"]=="Live" else "#5b6b82";c.create_line(xa,48,xb,48,fill=col,width=2)
             for j in range(7):
                 x=xa+(xb-xa)*j/6;c.create_line(x,48,x,ybeam-5,arrow="last",fill=col)
-            c.create_text((xa+xb)/2,38,text=f"{u['w']:g} kip/ft",fill=col)
+            c.create_text((xa+xb)/2,38,text=f"{u['w']:g} kip/ft",fill=col,font=("TkDefaultFont",12))
         for x in (left,right):c.create_polygon(x,ybeam+4,x-9,ybeam+19,x+9,ybeam+19,fill="white",outline=NAVY,width=2)
         chart_specs=[("Shear V (kip)",r["V"],TEAL,150), ("Moment M (kip-ft)",r["M"],BLUE,265),("Deflection δ (in)",lambda x:r["d"](x,29000,self.section["Ix"]),PURPLE,380)]
         for title,fn,col,base in chart_specs:
             vals=[fn(L*i/240) for i in range(241)];vmin=min(0,min(vals));vmax=max(0,max(vals));rng=max(vmax-vmin,1e-9);scale=54/rng
-            c.create_text(12,base-36,anchor="nw",text=title,fill=col,font=("TkDefaultFont",10,"bold"));c.create_line(left,base,right,base,fill="#8994a1")
+            c.create_text(12,base-36,anchor="nw",text=title,fill=col,font=("TkDefaultFont",12,"bold"));c.create_line(left,base,right,base,fill="#8994a1")
             coords=[]
             for i,val in enumerate(vals):coords.extend((left+pw*i/240,base-val*scale))
             c.create_line(*coords,fill=col,width=2,smooth=False)
-        self.tooltip=c.create_text(left,470,anchor="w",text="Move pointer over diagrams to inspect values.",fill="#465363")
+        self.tooltip=c.create_text(left,470,anchor="w",text="Move pointer over diagrams to inspect values.",fill="#465363",font=("TkDefaultFont",12))
         def hover(e):
             x=max(left,min(right,e.x));xx=(x-left)/pw*L
             self.chart.itemconfigure(self.tooltip,text=f"x = {xx:.2f} ft   ·   V = {r['V'](xx):.2f} kip   ·   M = {r['M'](xx):.2f} kip-ft   ·   δ = {r['d'](xx,29000,self.section['Ix']):.3f} in")
