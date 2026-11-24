@@ -89,6 +89,8 @@ class BeamDesigner(tk.Tk):
         self.chart=tk.Canvas(right,bg="white",height=490,highlightthickness=0);self.chart.pack(fill="x",expand=False)
         self.chart.bind("<Configure>",lambda e:self.draw())
         self.summary=ttk.Frame(right,padding=10,style="Card.TFrame");self.summary.pack(fill="x",pady=10)
+        self.summary_text=ttk.Label(self.summary,text="",style="Muted.TLabel",justify="left")
+        self.summary_text.pack(anchor="w")
         self.checks=ttk.Frame(right,padding=12,style="Card.TFrame");self.checks.pack(fill="x")
         self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="Muted.TLabel");self.notes.pack(fill="x",pady=12)
 
@@ -165,7 +167,9 @@ class BeamDesigner(tk.Tk):
             live=analyze(self.support.get(),L,[p for p in pts if p["type"]=="Live"],[u for u in self.uniforms if u["type"]=="Live"],29000,s["Ix"])
             self.live=live;self.section=s;self.fyval=fy;self.den=den;self.error=None;self.draw();self.render_results()
         except (ValueError,KeyError,ZeroDivisionError) as e:
-            self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700);self.summary.configure(text="");self.checks.configure(text="")
+            self.error=str(e);self.chart.delete("all");self.chart.create_text(20,30,anchor="nw",text=self.error,fill="#a32924",width=700)
+            self.summary_text.configure(text="")
+            for w in self.checks.winfo_children(): w.destroy()
 
     def render_results(self):
         r=self.result;live=self.live;s=self.section;L=float(self.span.get());simple=self.support.get()=="Simply supported"
@@ -174,7 +178,7 @@ class BeamDesigner(tk.Tk):
         checks=[("Bending",fb,Fb,"ksi"),("Shear",fv,Fv,"ksi"),("Deflection (live load)",dl,limit,"in")]
         passed=all(demand/allow<=1+1e-9 for _,demand,allow,_ in checks)
         reaction=f"Reactions: {r['RA']:.2f} / {r['RB']:.2f} kip (left / right)" if simple else f"Fixed end: {r['RA']:.2f} kip, moment {abs(r['M0']):.2f} kip-ft"
-        self.summary.configure(text=f"{'PASS' if passed else 'FAIL'}  |  {reaction}\nMax shear {vabs:.2f} kip at {r['vmax'][1]:.2f} ft   ·   Max moment {mabs:.2f} kip-ft at {r['mmax'][1]:.2f} ft\nMax total deflection {dt:.3f} in at {r['dmax'][1]:.2f} ft")
+        self.summary_text.configure(text=f"{'PASS' if passed else 'FAIL'}  |  {reaction}\nMax shear {vabs:.2f} kip at {r['vmax'][1]:.2f} ft   ·   Max moment {mabs:.2f} kip-ft at {r['mmax'][1]:.2f} ft\nMax total deflection {dt:.3f} in at {r['dmax'][1]:.2f} ft")
         for w in self.checks.winfo_children():w.destroy()
         ttk.Label(self.checks,text="DESIGN CHECKS",style="Section.TLabel").grid(row=0,column=0,columnspan=5,sticky="w",pady=(0,6))
         for c,t in enumerate(("Check","Demand","Allowable","Ratio","Result")):ttk.Label(self.checks,text=t,style="Muted.TLabel").grid(row=1,column=c,sticky="w",padx=8)

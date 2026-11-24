@@ -9,3 +9,6 @@
 - Asked: Reported that the app still does not launch.
   Changed: Re-ran the app with Python fault reporting. It aborts while creating the Tk window (exit code 134); this execution session has no graphical display (`DISPLAY` is unset), so GUI startup could not be verified here.
   Worked: Not confirmed; the failure in this session is at Tk window initialization, before the app interface is shown.
+- Asked: Shared the local traceback showing `unknown option "-text"` during startup.
+  Changed: Added a label inside the summary frame and update that label for results; invalid input now clears result widgets safely.
+  Worked: The module compiles. GUI startup could not be exercised in this no-display environment.
