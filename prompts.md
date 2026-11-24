@@ -45,3 +45,6 @@
 - Asked: Clean up the project files by committing or deleting them.
   Changed: Removed generated Python bytecode, added ignore rules for Python caches, and committed the reference HTML and existing beam design and exports.
   Worked: The project files were preserved and the generated cache is ignored.
+- Asked: Delete the HTML reference file.
+  Changed: Recorded the deletion of `index.html` from the project.
+  Worked: The file is absent; the Python app reads its steel data from the bundled CSV.
