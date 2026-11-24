@@ -173,6 +173,7 @@ class BeamDesigner(tk.Tk):
         self.summary=ttk.Frame(right,padding=10,style="Card.TFrame");self.summary.pack(fill="x",pady=10)
         self.summary_text=ttk.Label(self.summary,text="",style="Muted.TLabel",justify="left")
         self.summary_text.pack(anchor="w")
+        ttk.Button(right,text="Export results to CSV…",command=self.export_results).pack(anchor="e",pady=(0,10))
         self.checks=ttk.Frame(right,padding=12,style="Card.TFrame");self.checks.pack(fill="x")
         self.notes=ttk.Label(right,text="",wraplength=850,justify="left",style="Muted.TLabel");self.notes.pack(fill="x",pady=12)
 
@@ -266,6 +267,48 @@ class BeamDesigner(tk.Tk):
         self.selfw.set(design["self_weight"])
         self.points = design["points"]; self.uniforms = design["uniforms"]
         self.rows(); self.update(); self.design_path = path
+
+    def export_results(self):
+        try:
+            design = self.current_design()
+        except ValueError as exc:
+            messagebox.showerror("Cannot export results", str(exc), parent=self)
+            return
+        span = design["span"]
+        uniforms = list(design["uniforms"])
+        section = BY_NAME[design["shape"]]
+        if design["self_weight"]:
+            uniforms.append({"a": 0, "b": span, "w": section["weight_plf"] / 1000, "type": "Dead"})
+        result = analyze(design["support"], span, design["points"], uniforms, 29000, section["Ix"])
+        # Include load boundaries, plus both sides of each interior point load.
+        positions = {span * i / 200 for i in range(201)}
+        positions.update(p["x"] for p in design["points"])
+        positions.update(x for u in uniforms for x in (u["a"], u["b"]))
+        jumps = {p["x"] for p in design["points"] if p["P"] != 0 and 0 < p["x"] < span}
+        path = filedialog.asksaveasfilename(parent=self, title="Export beam results",
+            defaultextension=".csv", filetypes=[("CSV files", "*.csv"), ("All files", "*")])
+        if not path:
+            return
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8-sig", newline="",
+                    dir=Path(path).resolve().parent, prefix=".beam-", suffix=".tmp", delete=False) as f:
+                temp_path = f.name
+                writer = csv.writer(f)
+                writer.writerow(["x (ft)", "V (kip)", "M (kip-ft)", "Total deflection (in, down positive)", "Shear side"])
+                for x in sorted(positions):
+                    sides = [(-1, "left"), (1, "right")] if x in jumps else [(-1, "left") if x == span else (1, "right")]
+                    for side, label in sides:
+                        writer.writerow([x, result["V"](x, side), result["M"](x),
+                                         result["d"](x, 29000, section["Ix"]), label])
+            os.replace(temp_path, path)
+            temp_path = None
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Cannot export results", str(exc), parent=self)
+        finally:
+            if temp_path:
+                try: os.unlink(temp_path)
+                except OSError: pass
 
     def add_point(self):
         try:L=float(self.span.get())

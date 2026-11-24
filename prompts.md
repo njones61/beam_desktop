@@ -27,3 +27,6 @@
 - Asked: Bring the application window to the front when it launches.
   Changed: On startup, request macOS application activation and raise and focus the Tk window, then release its temporary topmost setting.
   Worked: GUI focus behavior has not been verified in a desktop session.
+- Asked: Add a button that exports x, shear, moment, and deflection results to an Excel-compatible CSV file.
+  Changed: Added a CSV export button, including evenly spaced positions, load boundaries, both sides of point-load shear jumps, and units; updated the spec.
+  Worked: Implementation reviewed; export and Excel opening have not been exercised in a desktop session.
