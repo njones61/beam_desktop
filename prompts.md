@@ -42,3 +42,6 @@
 - Asked: Write a short README describing the app, packages to install, and launch command.
   Changed: Added README.md with the app's purpose, Python/Tkinter and ReportLab requirements, installation command, and startup command.
   Worked: The documented commands and dependency match the existing project files; installation and startup were not run.
+- Asked: Clean up the project files by committing or deleting them.
+  Changed: Removed generated Python bytecode, added ignore rules for Python caches, and committed the reference HTML and existing beam design and exports.
+  Worked: The project files were preserved and the generated cache is ignored.

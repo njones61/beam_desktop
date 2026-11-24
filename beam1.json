@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "support": "Simply supported",
+  "span": 20.0,
+  "shape": "W12X26",
+  "grade": "A992",
+  "fy": 50.0,
+  "limit": 360.0,
+  "self_weight": false,
+  "points": [],
+  "uniforms": [
+    {
+      "a": 0.0,
+      "b": 20.0,
+      "w": 1.0,
+      "type": "Live"
+    }
+  ]
+}
