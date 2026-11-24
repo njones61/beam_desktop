@@ -12,3 +12,6 @@
 - Asked: Shared the local traceback showing `unknown option "-text"` during startup.
   Changed: Added a label inside the summary frame and update that label for results; invalid input now clears result widgets safely.
   Worked: The module compiles. GUI startup could not be exercised in this no-display environment.
+- Asked: Reported that the app hangs after the startup fix.
+  Changed: Reviewed the startup and calculation flow; no definite blocking loop was identified. Need the stack trace from the user's hung process to locate the wait.
+  Worked: Not yet confirmed.
